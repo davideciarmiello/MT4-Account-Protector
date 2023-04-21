@@ -17,6 +17,7 @@ string    Version = "1.09";
 
 input int Slippage = 2; // Slippage
 input string LogFileName = "log.txt"; // Log file name
+input string ConfigFileName = ""; // Config file name
 input Enable EnableEmergencyButton = No; // Enable emergency button
 input bool PanelOnTopOfChart = true; // PanelOnTopOfChart: Draw chart as background?
 input bool DoNotDisableConditions = false; // DoNotDisableConditions: Don't disable conditions on trigger?
@@ -51,10 +52,12 @@ input bool DisableDailyProfitLossPointsLE = true; // Disable daily profit/loss l
 input bool DisableDailyProfitLossPercGE = true; // Disable daily profit/loss greater or equal percentage condition.
 input bool DisableDailyProfitLossPercLE = true; // Disable daily profit/loss level less or equal percentage condition.
 input int DelayOrderClose = 0; // DelayOrderClose: Delay in milliseconds.
+input int DelayClosePlatform = 0; // DelayClosePlatform: Delay in milliseconds.
 input bool UseTotalVolume = false; // UseTotalVolume: enable if trading with many small trades and partial position closing.
 input double AdditionalFunds = 0; // AdditionalFunds: Added to balance, equity, and free margin.
 input string Instruments = ""; // Instruments: Default list of trading instruments for order filtering.
 input bool CloseMostDistantFirst = false; // CloseMostDistantFirst: Close most distant trades first?
+input bool CloseAllOtherChartsFiltered = false; // CloseAllOtherChartsFiltered: Close only match filtered charts
 input bool BreakEvenProfitInCurrencyUnits = false; // BreakEvenProfitInCurrencyUnits: currency instead of points.
 input bool GlobalSnapshots = false; // GlobalSnapshots: AP instances share equity & margin snapshots.
 
@@ -66,7 +69,12 @@ CAccountProtector ExtDialog;
 int OnInit()
 {
     MathSrand(GetTickCount() + 2202051901); // Used by CreateInstanceId() in Dialog.mqh (standard library). Keep the second number unique across other panel indicators/EAs.
-
+    
+    if (StringLen(ConfigFileName) > 0)
+    {
+        ExtDialog.m_FileName = ConfigFileName;
+    }
+    
     if (!ExtDialog.LoadSettingsFromDisk())
     {
         sets.CountCommSwaps = true;
@@ -254,7 +262,14 @@ void OnDeinit(const int reason)
 {
     if ((reason == REASON_REMOVE) || (reason == REASON_CHARTCLOSE) || (reason == REASON_PROGRAM))
     {
-        ExtDialog.DeleteSettingsFile();
+        if (StringLen(ConfigFileName) > 0)
+        {
+            ExtDialog.SaveSettingsOnDisk();
+        }
+        else
+        {
+            ExtDialog.DeleteSettingsFile();
+        }
         Print("Trying to delete ini file.");
         if (!FileIsExist(ExtDialog.IniFileName() + ".dat")) Print("File doesn't exist.");
         else if (!FileDelete(ExtDialog.IniFileName() + ".dat")) Print("Failed to delete file: " + ExtDialog.IniFileName() + ".dat. Error: " + IntegerToString(GetLastError()));

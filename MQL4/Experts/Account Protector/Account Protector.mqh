@@ -68,7 +68,6 @@ private:
     // Actions Tab - Buttons
     CButton         m_BtnPositionStatus;
 
-    string          m_FileName;
     int             LogFile, QuantityClosedMarketOrders, QuantityDeletedPendingOrders, magic_array_counter, MagicNumbers_array[], instruments_array_counter;
     string          Instruments_array[];
     bool            IsANeedToContinueClosingOrders, IsANeedToContinueDeletingPendingOrders;
@@ -108,7 +107,8 @@ public:
 
     // Remember the panel's location to have the same location for minimized and maximized states.
     int          remember_top, remember_left;
-
+    string       m_FileName;
+    
 private:
     bool         CreateObjects();
     bool         InitObjects();
@@ -4433,6 +4433,7 @@ void CAccountProtector::CloseAllOtherCharts()
     {
         if (chart != ChartID()) // Avoid closing the current chart.
         {
+            if (CloseAllOtherChartsFiltered && CheckFilterSymbol(ChartSymbol(chart))) continue;
             ChartClose(chart);
         }
     }
@@ -4772,14 +4773,6 @@ void CAccountProtector::Trigger_Actions(string title)
         sets.TriggeredTime = TimeToString(TimeLocal(), TIME_DATE | TIME_MINUTES | TIME_SECONDS);
     }
 
-    // Close platform.
-    if (sets.ClosePlatform)
-    {
-        if (!DoNotDisableActions) sets.ClosePlatform = false;
-        Logging("ACTION IS TAKEN: Close platform.");
-        TerminalClose(0);
-    }
-
     // Enable autotrading.
     if (sets.EnableAuto)
     {
@@ -4810,6 +4803,19 @@ void CAccountProtector::Trigger_Actions(string title)
         CloseAllOtherCharts();
         sets.Triggered = true;
         sets.TriggeredTime = TimeToString(TimeLocal(), TIME_DATE | TIME_MINUTES | TIME_SECONDS);
+    }
+
+    // Close platform.
+    if (sets.ClosePlatform)
+    {
+        if (!DoNotDisableActions) sets.ClosePlatform = false;
+        Logging("ACTION IS TAKEN: Close platform.");
+        if (DelayClosePlatform)
+        {
+           Logging("Sleeping " + IntegerToString(DelayClosePlatform) + " ms before proceeding...");
+           Sleep(DelayClosePlatform);
+        }
+        TerminalClose(0);
     }
     
     SaveSettingsOnDisk();
